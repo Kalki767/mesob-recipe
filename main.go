@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 )
 
@@ -19,6 +18,58 @@ type Recipe struct {
 	Steps         []Step
 	TotalMinutes  int
 	Category      string
+}
+
+type RecipeStore struct {
+	NextID  int
+	Recipes map[int]*Recipe
+}
+
+func NewRecipeStore() *RecipeStore {
+	return &RecipeStore{NextID: 1, Recipes: make(map[int]*Recipe)}
+}
+func (r *RecipeStore) Add(recipe *Recipe) int {
+	r.Recipes[r.NextID] = recipe
+	r.NextID += 1
+	return r.NextID - 1
+}
+func (r *RecipeStore) Get(id int) (*Recipe, error) {
+	recipe, ok := r.Recipes[id]
+	if !ok {
+		return nil, errors.New("recipe was not found")
+	}
+
+	return recipe, nil
+}
+
+func (r *RecipeStore) Delete(id int) error {
+	if _, ok := r.Recipes[id]; !ok {
+		return errors.New("can't delete non existing recipe")
+	}
+	delete(r.Recipes, id)
+	return nil
+}
+
+func (r *RecipeStore) List() []int {
+	recipes := []int{}
+	start := 1
+	for start <= r.NextID {
+		if _, ok := r.Recipes[start]; ok {
+			recipes = append(recipes, start)
+		}
+		start += 1
+	}
+
+	return recipes
+}
+
+func (r *RecipeStore) CountByCategory() map[string]int {
+	count := make(map[string]int)
+
+	for _, recipe := range r.Recipes {
+		count[recipe.Category] += 1
+	}
+	return count
 }
 
 const santimPerBirr = 100
@@ -148,44 +199,39 @@ func main() {
 		"Foreign food",
 	)
 	CheckRecipeError(err)
-	recipes := make(map[int]*Recipe)
-	recipes[1] = recipe1
-	recipes[2] = recipe2
-	recipes[3] = recipe3
+	recipeStore := NewRecipeStore()
+	recipeStore.Add(recipe1)
+	recipeStore.Add(recipe2)
+	recipeStore.Add(recipe3)
 
-	ids := []int{}
-
-	count := make(map[string]int)
-
-	for i, recipe := range recipes {
-		count[recipe.Category] += 1
-		ids = append(ids, i)
-	}
-
-	slices.Sort(ids)
-
+	recipeStore.Delete(2)
+	recipe4, err := NewRecipe(
+		"Cake",
+		25005,
+		[]Step{
+			{Task: "  Chop the onion   ", Minutes: 10},
+			{Task: "Cook it with oil", Minutes: 5},
+			{Task: "Mix it with egg", Minutes: 5},
+		},
+		"Foreign food",
+	)
+	CheckRecipeError(err)
+	recipeStore.Add(recipe4)
+	ids := recipeStore.List()
 	for _, id := range ids {
-		recipe := recipes[id]
+		recipe, _ := recipeStore.Get(id)
+		fmt.Printf("Recipe #%d. ", id)
 		recipe.DisplayRecipe()
-	}
-	for key, value := range count {
-		fmt.Printf("Category count of %s: %d\n", key, value)
-	}
-	recipe, ok := recipes[3]
-	if ok {
-		fmt.Println("Recipe found")
-		recipe.DisplayRecipe()
-	} else {
-		fmt.Println("Recipe not found")
 	}
 
-	delete(recipes, 3)
-
-	recipe, ok = recipes[3]
-	if ok {
-		fmt.Println("Recipe found")
-		recipe.DisplayRecipe()
-	} else {
-		fmt.Println("Recipe not found")
+	err = recipeStore.Delete(5)
+	if err != nil {
+		fmt.Printf("couldn't delete recipe %s\n", err)
 	}
+
+	categoryCount := recipeStore.CountByCategory()
+	for category, count := range categoryCount {
+		fmt.Printf("Category count of %s is %d\n", category, count)
+	}
+
 }
