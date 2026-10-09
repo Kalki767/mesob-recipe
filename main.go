@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -17,6 +18,7 @@ type Recipe struct {
 	PriceInSantim int
 	Steps         []Step
 	TotalMinutes  int
+	Category      string
 }
 
 const santimPerBirr = 100
@@ -37,20 +39,27 @@ func splitDuration(minutes int) (int, int) {
 	return minutes / 60, minutes % 60
 }
 
-func NewRecipe(title string, priceInSantim int, steps []Step) (*Recipe, error) {
+func NewRecipe(title string, priceInSantim int, steps []Step, category string) (*Recipe, error) {
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return nil, errors.New("title cannot be empty")
 	}
 
 	if priceInSantim < 0 {
-		return nil, fmt.Errorf("price cannot be negative got %d", priceInSantim)
+		return nil, fmt.Errorf("price cannot be negative, got %d", priceInSantim)
 	}
+
+	category = strings.TrimSpace(category)
+	if category == "" {
+		return nil, errors.New("category cannot be empty")
+	}
+
 	if err := CleanSteps(steps); err != nil {
 		return nil, err
 	}
 	recipe := &Recipe{Title: title, PriceInSantim: priceInSantim, Steps: steps}
 	recipe.TotalMinutes = recipe.calculateMinutes()
+	recipe.Category = category
 	return recipe, nil
 }
 
@@ -70,7 +79,7 @@ func ValidateStep(step Step) error {
 	}
 
 	if step.Minutes <= 0 {
-		return fmt.Errorf("step minutes must be positive got %d", step.Minutes)
+		return fmt.Errorf("step minutes must be positive, got %d", step.Minutes)
 	}
 
 	return nil
@@ -87,36 +96,96 @@ func CleanSteps(steps []Step) error {
 	return nil
 }
 
+func CheckRecipeError(err error) {
+	if err != nil {
+		fmt.Println("couldn't create a recipe :", err)
+		os.Exit(1)
+	}
+}
+
+func (r *Recipe) DisplayRecipe() {
+	fmt.Printf("%s costs %s birr\n", r.Title, formatPrice(r.PriceInSantim))
+	for i, step := range r.Steps {
+		fmt.Printf("%d. %s (%d min)\n", i+1, step.Task, step.Minutes)
+	}
+	fmt.Printf("Category: %s\n", r.Category)
+	hours, remainingMinutes := splitDuration(r.TotalMinutes)
+	fmt.Printf("Total: %d hour %d minutes\n", hours, remainingMinutes)
+}
 func main() {
-	recipe, err := NewRecipe(
-		"  ",
+	recipe1, err := NewRecipe(
+		"Doro Wot",
 		25005,
 		[]Step{
 			{Task: "  Chop the onion   ", Minutes: 10},
 			{Task: "Cook it with oil", Minutes: 5},
 			{Task: "Mix it with egg", Minutes: 5},
 		},
+		"Habesha food",
 	)
 
-	if err != nil {
-		fmt.Println("couldn't create a recipe :", err)
-		os.Exit(1)
+	CheckRecipeError(err)
+
+	recipe2, err := NewRecipe(
+		"Shiro Wot",
+		25005,
+		[]Step{
+			{Task: "  Chop the onion   ", Minutes: 10},
+			{Task: "Cook it with oil", Minutes: 5},
+			{Task: "Mix it with egg", Minutes: 5},
+		},
+		"Habesha food",
+	)
+	CheckRecipeError(err)
+	recipe3, err := NewRecipe(
+		"Lazagna",
+		25005,
+		[]Step{
+			{Task: "  Chop the onion   ", Minutes: 10},
+			{Task: "Cook it with oil", Minutes: 5},
+			{Task: "Mix it with egg", Minutes: 5},
+		},
+		"Foreign food",
+	)
+	CheckRecipeError(err)
+	recipes := make(map[int]*Recipe)
+	recipes[1] = recipe1
+	recipes[2] = recipe2
+	recipes[3] = recipe3
+
+	ids := []int{}
+
+	count := make(map[string]int)
+
+	for i, recipe := range recipes {
+		count[recipe.Category] += 1
+		ids = append(ids, i)
 	}
 
-	fmt.Printf("%s costs %s birr\n", recipe.Title, formatPrice(recipe.PriceInSantim))
+	slices.Sort(ids)
 
-	if err := recipe.AddStep(Step{Task: "  Serve with injera", Minutes: -5}); err != nil {
-		fmt.Printf("%s\n", err)
+	for _, id := range ids {
+		recipe := recipes[id]
+		recipe.DisplayRecipe()
+	}
+	for key, value := range count {
+		fmt.Printf("Category count of %s: %d\n", key, value)
+	}
+	recipe, ok := recipes[3]
+	if ok {
+		fmt.Println("Recipe found")
+		recipe.DisplayRecipe()
+	} else {
+		fmt.Println("Recipe not found")
 	}
 
-	if err := recipe.AddStep(Step{Task: "    ", Minutes: 2}); err != nil {
-		fmt.Printf("%s\n", err)
-	}
+	delete(recipes, 3)
 
-	for i, s := range recipe.Steps {
-		fmt.Printf("%d. %s (%d min)\n", i+1, s.Task, s.Minutes)
+	recipe, ok = recipes[3]
+	if ok {
+		fmt.Println("Recipe found")
+		recipe.DisplayRecipe()
+	} else {
+		fmt.Println("Recipe not found")
 	}
-
-	hours, remainingMinutes := splitDuration(recipe.TotalMinutes)
-	fmt.Printf("Total: %d hour %d minutes\n", hours, remainingMinutes)
 }
