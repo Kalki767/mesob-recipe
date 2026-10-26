@@ -264,6 +264,25 @@ func (r *RecipeStore) FindByMaxMinutes(maxMinutes int) ([]int, error) {
 	return matchedRecipes, nil
 }
 
+func (r *RecipeStore) FindByTitle(title string) ([]int, error) {
+	title = strings.ToLower(title)
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return nil, errors.New("title is empty")
+	}
+
+	matchedRecipes := []int{}
+	recipeIds := r.List()
+	for _, id := range recipeIds {
+		recipe := r.Recipes[id]
+		storedTitle := strings.ToLower(recipe.Title)
+		if strings.Contains(storedTitle, title) {
+			matchedRecipes = append(matchedRecipes, id)
+		}
+	}
+	return matchedRecipes, nil
+}
+
 // ============================================================================
 // General Utilities & Formatting Helpers
 // ============================================================================
@@ -433,6 +452,40 @@ func main() {
 		fmt.Println(recipes)
 	}
 
+	doroRecipes, err := recipeStore.FindByTitle("doro")
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(doroRecipes)
+	}
+
+	doroWotRecipes, err := recipeStore.FindByTitle("WOT")
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(doroWotRecipes)
+	}
+
+	lasagnaRecipes, err := recipeStore.FindByTitle("  lazagna   ")
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(lasagnaRecipes)
+	}
+
+	firfirRecipes, err := recipeStore.FindByTitle("firfir")
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(firfirRecipes)
+	}
+
+	emptyTitle, err := recipeStore.FindByTitle("    ")
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(emptyTitle)
+	}
 	err = recipeStore.Delete(5)
 	if err != nil {
 		fmt.Printf("couldn't delete recipe %s\n", err)
