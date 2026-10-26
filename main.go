@@ -248,6 +248,22 @@ func (r *RecipeStore) FindByIngredient(name string) ([]int, error) {
 	return matchedRecipes, nil
 }
 
+func (r *RecipeStore) FindByMaxMinutes(maxMinutes int) ([]int, error) {
+	if maxMinutes <= 0 {
+		return nil, fmt.Errorf("max minutes must be positive, got: %d", maxMinutes)
+	}
+	matchedRecipes := []int{}
+	recipeIds := r.List()
+	for _, id := range recipeIds {
+		recipe := r.Recipes[id]
+		if recipe.TotalMinutes <= maxMinutes {
+			matchedRecipes = append(matchedRecipes, id)
+		}
+	}
+
+	return matchedRecipes, nil
+}
+
 // ============================================================================
 // General Utilities & Formatting Helpers
 // ============================================================================
@@ -272,7 +288,7 @@ func main() {
 		[]Step{
 			{Task: "  Chop the onion   ", Minutes: 10},
 			{Task: "Cook it with oil", Minutes: 5},
-			{Task: "Mix it with egg", Minutes: 5},
+			{Task: "Mix it with egg", Minutes: 7},
 		},
 		"Habesha food",
 		[]Ingredient{
@@ -296,7 +312,7 @@ func main() {
 		[]Step{
 			{Task: "  Chop the onion   ", Minutes: 10},
 			{Task: "Cook it with oil", Minutes: 5},
-			{Task: "Mix it with egg", Minutes: 5},
+			{Task: "Mix it with egg", Minutes: 2},
 		},
 		"Habesha food",
 		[]Ingredient{
@@ -318,7 +334,7 @@ func main() {
 		25005,
 		[]Step{
 			{Task: "  Chop the onion   ", Minutes: 10},
-			{Task: "Cook it with oil", Minutes: 5},
+			{Task: "Cook it with oil", Minutes: 4},
 			{Task: "Mix it with egg", Minutes: 5},
 		},
 		"Foreign food",
@@ -343,7 +359,7 @@ func main() {
 		[]Step{
 			{Task: "  Chop the onion   ", Minutes: 10},
 			{Task: "Cook it with oil", Minutes: 5},
-			{Task: "Mix it with egg", Minutes: 5},
+			{Task: "Mix it with egg", Minutes: 9},
 		},
 		"Foreign food",
 		[]Ingredient{},
@@ -387,6 +403,34 @@ func main() {
 		fmt.Println(emptyRecipes)
 	} else {
 		fmt.Printf("couldn't find ingredient %s\n", err)
+	}
+
+	recipes, err := recipeStore.FindByMaxMinutes(19)
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(recipes)
+	}
+
+	recipes, err = recipeStore.FindByMaxMinutes(20)
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(recipes)
+	}
+
+	recipes, err = recipeStore.FindByMaxMinutes(15)
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(recipes)
+	}
+
+	recipes, err = recipeStore.FindByMaxMinutes(-10)
+	if err != nil {
+		fmt.Printf("couldn't find recipe: %s\n", err)
+	} else {
+		fmt.Println(recipes)
 	}
 
 	err = recipeStore.Delete(5)
