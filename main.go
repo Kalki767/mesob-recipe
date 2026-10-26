@@ -101,6 +101,7 @@ func CleanIngredients(ingredients []Ingredient) error {
 		if err := ValidateIngredient(ingredients[i]); err != nil {
 			return err
 		}
+		ingredients[i].Name = strings.ToLower(ingredients[i].Name)
 	}
 	return nil
 }
@@ -125,6 +126,7 @@ func ValidateIngredient(ingredient Ingredient) error {
 func (r *Recipe) AddIngredient(ingredient Ingredient) error {
 	ingredient.Name = strings.TrimSpace(ingredient.Name)
 	err := ValidateIngredient(ingredient)
+	ingredient.Name = strings.ToLower(ingredient.Name)
 	if err != nil {
 		return err
 	}
@@ -225,6 +227,27 @@ func (r *RecipeStore) CountByCategory() map[string]int {
 	return count
 }
 
+func (r *RecipeStore) FindByIngredient(name string) ([]int, error) {
+	name = strings.ToLower(name)
+	name = strings.TrimSpace(name)
+	recipes := r.List()
+	var matchedRecipes []int = []int{}
+	if name == "" {
+		return nil, errors.New("ingredient is empty")
+	}
+	for _, id := range recipes {
+		recipe := r.Recipes[id]
+		for _, ingredient := range recipe.Ingredients {
+			if strings.Contains(ingredient.Name, name) {
+				matchedRecipes = append(matchedRecipes, id)
+				break
+			}
+		}
+	}
+
+	return matchedRecipes, nil
+}
+
 // ============================================================================
 // General Utilities & Formatting Helpers
 // ============================================================================
@@ -264,7 +287,7 @@ func main() {
 		}
 		recipeStore.Add(recipe1)
 	} else {
-		fmt.Print(fmt.Errorf("couldn't create recipe: found %s\n", err))
+		fmt.Printf("couldn't create recipe: found %s\n", err)
 	}
 
 	recipe2, err := NewRecipe(
@@ -287,7 +310,7 @@ func main() {
 		}
 		recipeStore.Add(recipe2)
 	} else {
-		fmt.Print(fmt.Errorf("couldn't create recipe: found %s\n", err))
+		fmt.Printf("couldn't create recipe: found %s\n", err)
 	}
 
 	recipe3, err := NewRecipe(
@@ -307,12 +330,12 @@ func main() {
 	if err == nil {
 		recipeStore.Add(recipe3)
 	} else {
-		fmt.Print(fmt.Errorf("couldn't create recipe: found %s\n", err))
+		fmt.Printf("couldn't create recipe: found %s\n", err)
 	}
 
 	err = recipeStore.Delete(2)
 	if err != nil {
-		fmt.Print(fmt.Errorf("couldn't delete recipe: %s\n", err))
+		fmt.Printf("couldn't delete recipe: %s\n", err)
 	}
 	recipe4, err := NewRecipe(
 		"Cake",
@@ -328,7 +351,7 @@ func main() {
 	if err == nil {
 		recipeStore.Add(recipe4)
 	} else {
-		fmt.Print(fmt.Errorf("couldn't create recipe: found %s\n", err))
+		fmt.Printf("couldn't create recipe: found %s\n", err)
 	}
 
 	ids := recipeStore.List()
@@ -336,6 +359,34 @@ func main() {
 		recipe, _ := recipeStore.Get(id)
 		fmt.Printf("Recipe #%d. ", id)
 		recipe.DisplayRecipe()
+	}
+
+	onionRecipes, err := recipeStore.FindByIngredient("Onion")
+	if err == nil {
+		fmt.Println(onionRecipes)
+	} else {
+		fmt.Printf("couldn't find ingredient %s\n", err)
+	}
+
+	saltRecipes, err := recipeStore.FindByIngredient("   salt   ")
+	if err == nil {
+		fmt.Println(saltRecipes)
+	} else {
+		fmt.Printf("couldn't find ingredient %s\n", err)
+	}
+
+	garlicRecipes, err := recipeStore.FindByIngredient(" garlic")
+	if err == nil {
+		fmt.Println(garlicRecipes)
+	} else {
+		fmt.Printf("couldn't find ingredient %s\n", err)
+	}
+
+	emptyRecipes, err := recipeStore.FindByIngredient("   ")
+	if err == nil {
+		fmt.Println(emptyRecipes)
+	} else {
+		fmt.Printf("couldn't find ingredient %s\n", err)
 	}
 
 	err = recipeStore.Delete(5)
