@@ -227,41 +227,43 @@ func (r *RecipeStore) CountByCategory() map[string]int {
 	return count
 }
 
+func (r *RecipeStore) filter(match func(*Recipe) bool) []int {
+	recipeIds := r.List()
+	matchedRecipes := []int{}
+	for _, id := range recipeIds {
+		recipe := r.Recipes[id]
+		if match(recipe) {
+			matchedRecipes = append(matchedRecipes, id)
+		}
+	}
+	return matchedRecipes
+}
+
 func (r *RecipeStore) FindByIngredient(name string) ([]int, error) {
 	name = strings.ToLower(name)
 	name = strings.TrimSpace(name)
-	recipes := r.List()
-	var matchedRecipes []int = []int{}
 	if name == "" {
 		return nil, errors.New("ingredient is empty")
 	}
-	for _, id := range recipes {
-		recipe := r.Recipes[id]
+
+	return r.filter(func(recipe *Recipe) bool {
 		for _, ingredient := range recipe.Ingredients {
 			if strings.Contains(ingredient.Name, name) {
-				matchedRecipes = append(matchedRecipes, id)
-				break
+				return true
 			}
 		}
-	}
-
-	return matchedRecipes, nil
+		return false
+	}), nil
 }
 
 func (r *RecipeStore) FindByMaxMinutes(maxMinutes int) ([]int, error) {
 	if maxMinutes <= 0 {
 		return nil, fmt.Errorf("max minutes must be positive, got: %d", maxMinutes)
 	}
-	matchedRecipes := []int{}
-	recipeIds := r.List()
-	for _, id := range recipeIds {
-		recipe := r.Recipes[id]
-		if recipe.TotalMinutes <= maxMinutes {
-			matchedRecipes = append(matchedRecipes, id)
-		}
-	}
+	return r.filter(func(recipe *Recipe) bool {
+		return recipe.TotalMinutes <= maxMinutes
+	}), nil
 
-	return matchedRecipes, nil
 }
 
 func (r *RecipeStore) FindByTitle(title string) ([]int, error) {
@@ -271,16 +273,10 @@ func (r *RecipeStore) FindByTitle(title string) ([]int, error) {
 		return nil, errors.New("title is empty")
 	}
 
-	matchedRecipes := []int{}
-	recipeIds := r.List()
-	for _, id := range recipeIds {
-		recipe := r.Recipes[id]
+	return r.filter(func(recipe *Recipe) bool {
 		storedTitle := strings.ToLower(recipe.Title)
-		if strings.Contains(storedTitle, title) {
-			matchedRecipes = append(matchedRecipes, id)
-		}
-	}
-	return matchedRecipes, nil
+		return strings.Contains(storedTitle, title)
+	}), nil
 }
 
 // ============================================================================
@@ -349,7 +345,7 @@ func main() {
 	}
 
 	recipe3, err := NewRecipe(
-		"Lazagna",
+		"Lasagna",
 		25005,
 		[]Step{
 			{Task: "  Chop the onion   ", Minutes: 10},
@@ -466,7 +462,7 @@ func main() {
 		fmt.Println(doroWotRecipes)
 	}
 
-	lasagnaRecipes, err := recipeStore.FindByTitle("  lazagna   ")
+	lasagnaRecipes, err := recipeStore.FindByTitle("  lasagna   ")
 	if err != nil {
 		fmt.Printf("couldn't find recipe: %s\n", err)
 	} else {
