@@ -25,7 +25,6 @@ func main() {
 			{Name: "  Onion  ", Amount: 3, Unit: ""},
 		},
 	)
-
 	if err == nil {
 		err = recipe1.AddIngredient(recipe.Ingredient{Name: "  oil  ", Amount: 1, Unit: "Cups"})
 		if err != nil {
