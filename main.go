@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/Kalki767/mesob-recipe/internal/recipe"
@@ -101,9 +102,18 @@ func main() {
 
 	ids := recipeStore.List()
 	for _, id := range ids {
-		currentRecipe, _ := recipeStore.Get(id)
+		currentRecipe, err := recipeStore.Get(id)
+		if err != nil {
+			fmt.Printf("recipe not found , %s", err)
+			continue
+		}
 		fmt.Printf("Recipe #%d. ", id)
-		currentRecipe.DisplayRecipe()
+		data, err := json.MarshalIndent(currentRecipe, "", " ")
+		if err != nil {
+			fmt.Printf("Couldn't convert recipe to json %s\n", err)
+		} else {
+			fmt.Println(string(data))
+		}
 	}
 
 	onionRecipes, err := recipeStore.FindByIngredient("Onion")
@@ -205,4 +215,5 @@ func main() {
 	for category, count := range categoryCount {
 		fmt.Printf("Category count of %s is %d\n", category, count)
 	}
+
 }

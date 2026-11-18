@@ -3,6 +3,7 @@ package recipe
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -13,15 +14,15 @@ const santimPerBirr = 100
 // ============================================================================
 
 type Ingredient struct {
-	Name    string
-	Amount  float64
-	Unit    string
-	ToTaste bool
+	Name    string `json:"name"`
+	Amount  float64 `json:"amount"`
+	Unit    string `json:"unit"`
+	ToTaste bool `json:"to_taste"`
 }
 
 type Step struct {
-	Task    string
-	Minutes int
+	Task    string `json:"task"`
+	Minutes int `json:"minutes"`
 }
 
 func validateStep(step Step) error {
@@ -58,6 +59,16 @@ type Recipe struct {
 	totalMinutes  int
 	category      string
 	ingredients   []Ingredient
+}
+
+type RecipeView struct {
+	ID int `json:"id"`
+	Title string `json:"title"`
+	PriceInSantim int `json:"price_in_santim"`
+	Steps         []Step `json:"steps"`
+	TotalMinutes  int `json:"total_minutes"`
+	Category      string `json:"category"`
+	Ingredients   []Ingredient `json:"ingredients"`
 }
 
 func NewRecipe(title string, priceInSantim int, steps []Step, category string, ingredients []Ingredient) (*Recipe, error) {
@@ -184,13 +195,21 @@ func (r *RecipeStore) Add(recipe *Recipe) int {
 	return r.nextID - 1
 }
 
-func (r *RecipeStore) Get(id int) (*Recipe, error) {
+func (r *RecipeStore) Get(id int) (*RecipeView, error) {
 	foundRecipe, ok := r.recipes[id]
 	if !ok {
 		return nil, errors.New("recipe was not found")
 	}
-
-	return foundRecipe, nil
+	viewRecipe := &RecipeView{
+		ID: id,
+		Title: foundRecipe.title,
+		PriceInSantim: foundRecipe.priceInSantim,
+		Steps: slices.Clone(foundRecipe.steps),
+		TotalMinutes: foundRecipe.totalMinutes,
+		Category: foundRecipe.category,
+		Ingredients: slices.Clone(foundRecipe.ingredients),
+	}
+	return viewRecipe, nil
 }
 
 func (r *RecipeStore) Delete(id int) error {
