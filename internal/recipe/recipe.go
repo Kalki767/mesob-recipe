@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 )
 
 const santimPerBirr = 100
@@ -183,6 +184,7 @@ func (r *Recipe) DisplayRecipe() {
 type RecipeStore struct {
 	nextID  int
 	recipes map[int]*Recipe
+	mu sync.Mutex
 }
 
 func NewRecipeStore() *RecipeStore {
@@ -190,12 +192,16 @@ func NewRecipeStore() *RecipeStore {
 }
 
 func (r *RecipeStore) Add(recipe *Recipe) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.recipes[r.nextID] = recipe
 	r.nextID += 1
 	return r.nextID - 1
 }
 
 func (r *RecipeStore) Get(id int) (*RecipeView, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	foundRecipe, ok := r.recipes[id]
 	if !ok {
 		return nil, errors.New("recipe was not found")
@@ -213,6 +219,8 @@ func (r *RecipeStore) Get(id int) (*RecipeView, error) {
 }
 
 func (r *RecipeStore) Delete(id int) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if _, ok := r.recipes[id]; !ok {
 		return errors.New("can't delete non existing recipe")
 	}
@@ -221,6 +229,13 @@ func (r *RecipeStore) Delete(id int) error {
 }
 
 func (r *RecipeStore) List() []int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	recipes := r.buildList()
+	return recipes
+	
+}
+func (r *RecipeStore) buildList() []int{
 	recipes := []int{}
 	start := 1
 	for start <= r.nextID {
@@ -232,8 +247,9 @@ func (r *RecipeStore) List() []int {
 
 	return recipes
 }
-
 func (r *RecipeStore) CountByCategory() map[string]int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	count := make(map[string]int)
 
 	for _, recipe := range r.recipes {
@@ -243,7 +259,9 @@ func (r *RecipeStore) CountByCategory() map[string]int {
 }
 
 func (r *RecipeStore) filter(match func(*Recipe) bool) []int {
-	recipeIds := r.List()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	recipeIds := r.buildList()
 	matchedRecipes := []int{}
 	for _, id := range recipeIds {
 		recipe := r.recipes[id]

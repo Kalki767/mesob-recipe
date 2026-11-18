@@ -2,6 +2,7 @@ package recipe
 
 import (
 	"slices"
+	"sync"
 	"testing"
 )
 
@@ -358,4 +359,31 @@ func TestCountByCategory(t *testing.T) {
 			t.Errorf("%q: got %d, want %d", category, got[category], count)
 		}
 	}
+}
+
+func TestStoreConcurrentAdd(t *testing.T){
+	store := NewRecipeStore()
+	recipe, err := NewRecipe("  Doro Wot  ", 100,
+		[]Step{{Task: "  Chop the onion  ", Minutes: 10}, {Task: "Cook", Minutes: 12}},
+		"Habesha food",
+		[]Ingredient{{Name: "  Onion  ", Amount: 3}},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error %s", err)
+	}
+	var wg sync.WaitGroup
+	for range 100{
+		wg.Go(func(){
+			store.Add(recipe)
+		})
+		wg.Go(func ()  {
+			store.List()
+		})
+	}
+	wg.Wait()
+	recipes := store.List()
+	if len(recipes) != 100{
+		t.Errorf("expected 100 recipes, found %d", len(recipes))
+	}
+
 }
