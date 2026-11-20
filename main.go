@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 
+	"github.com/Kalki767/mesob-recipe/internal/api"
 	"github.com/Kalki767/mesob-recipe/internal/recipe"
 )
 
@@ -215,5 +218,15 @@ func main() {
 	for category, count := range categoryCount {
 		fmt.Printf("Category count of %s is %d\n", category, count)
 	}
+
+	server := api.NewServer(recipeStore)
+
+	err = http.ListenAndServe(":8081", server.Routes())
+
+	if err != nil {
+		log.Fatalf("failed to start server, found %s", err)
+	}
+
+
 
 }
