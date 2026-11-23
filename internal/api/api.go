@@ -40,10 +40,39 @@ func (s *Server) getRecipe(w http.ResponseWriter, r *http.Request){
 
 }
 
+func (s *Server) listRecipes (w http.ResponseWriter, r *http.Request) {
+	params := r.URL.Query()
+	if !params.Has("title"){
+		recipeSummary := s.store.List()
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(recipeSummary)
+		if err != nil {
+			log.Printf("couldn't convert to json found %s", err)
+			return
+		}
+	} else {
+		title := params.Get("title")
+		recipeSummary, err := s.store.FindByTitle(title)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		err = json.NewEncoder(w).Encode(recipeSummary)
+		if err != nil {
+			log.Printf("couldn't convert to json found %s", err)
+			return
+		}
+	}	
+	
+}
+
 func (s *Server) Routes() http.Handler{
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /recipes/{id}", s.getRecipe)
+	mux.HandleFunc("GET /recipes", s.listRecipes)
+	
 
 	return mux
 }

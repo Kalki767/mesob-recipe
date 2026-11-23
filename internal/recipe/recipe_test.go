@@ -289,8 +289,18 @@ func TestFindByTitle(t *testing.T) {
 	}
 }
 
-// checkIDs is the shared assert for the Find* tests.
-func checkIDs(t *testing.T, got []int, err error, want []int, wantErr bool) {
+// summaryIDs pulls the IDs out of a list of summaries, in order.
+func summaryIDs(summaries []*RecipeSummary) []int {
+	ids := []int{}
+	for _, s := range summaries {
+		ids = append(ids, s.ID)
+	}
+	return ids
+}
+
+// checkIDs is the shared assert for the Find* tests: it checks the error and
+// that the summaries returned are exactly the wanted IDs, in order.
+func checkIDs(t *testing.T, got []*RecipeSummary, err error, want []int, wantErr bool) {
 	t.Helper()
 	if wantErr {
 		if err == nil {
@@ -304,8 +314,8 @@ func checkIDs(t *testing.T, got []int, err error, want []int, wantErr bool) {
 	if got == nil {
 		t.Errorf("got nil, want a non-nil slice (it becomes null instead of [] in JSON)")
 	}
-	if !slices.Equal(got, want) {
-		t.Errorf("got %v, want %v", got, want)
+	if ids := summaryIDs(got); !slices.Equal(ids, want) {
+		t.Errorf("got IDs %v, want %v", ids, want)
 	}
 }
 
@@ -323,8 +333,28 @@ func TestStoreIDsAreNeverReused(t *testing.T) {
 	if id := store.Add(r); id != 4 {
 		t.Errorf("new recipe got ID %d, want 4 (IDs must never be reused)", id)
 	}
-	if got := store.List(); !slices.Equal(got, []int{1, 3, 4}) {
-		t.Errorf("List() = %v, want [1 3 4]", got)
+	if got := summaryIDs(store.List()); !slices.Equal(got, []int{1, 3, 4}) {
+		t.Errorf("List() IDs = %v, want [1 3 4]", got)
+	}
+}
+
+func TestListBuildsSummaries(t *testing.T) {
+	store := newTestStore(t)
+
+	got := store.List()
+	if len(got) != 3 {
+		t.Fatalf("got %d summaries, want 3", len(got))
+	}
+	want := RecipeSummary{ID: 1, Title: "Doro Wot", PriceInSantim: 100, TotalMinutes: 22, Category: "Habesha food"}
+	if *got[0] != want {
+		t.Errorf("first summary = %+v, want %+v", *got[0], want)
+	}
+}
+
+func TestListEmptyStoreIsNotNil(t *testing.T) {
+	got := NewRecipeStore().List()
+	if got == nil || len(got) != 0 {
+		t.Errorf("List() on an empty store = %v, want an empty non-nil slice", got)
 	}
 }
 

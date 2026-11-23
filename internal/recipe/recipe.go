@@ -72,6 +72,14 @@ type RecipeView struct {
 	Ingredients   []Ingredient `json:"ingredients"`
 }
 
+type RecipeSummary struct {
+	ID int `json:"id"`
+	Title string `json:"title"`
+	PriceInSantim int `json:"price_in_santim"`
+	TotalMinutes  int `json:"total_minutes"`
+	Category      string `json:"category"`
+}
+
 func NewRecipe(title string, priceInSantim int, steps []Step, category string, ingredients []Ingredient) (*Recipe, error) {
 	title = strings.TrimSpace(title)
 	if title == "" {
@@ -228,10 +236,15 @@ func (r *RecipeStore) Delete(id int) error {
 	return nil
 }
 
-func (r *RecipeStore) List() []int {
+func (r *RecipeStore) List() []*RecipeSummary {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	recipes := r.buildList()
+	recipeIds := r.buildList()
+	recipes := []*RecipeSummary{}
+	for _, id := range recipeIds{
+		recipeSummary := r.buildRecipeSummary(id)
+		recipes = append(recipes, recipeSummary)
+	}
 	return recipes
 	
 }
@@ -247,6 +260,19 @@ func (r *RecipeStore) buildList() []int{
 
 	return recipes
 }
+
+func (r * RecipeStore) buildRecipeSummary(id int) *RecipeSummary{
+	recipe := r.recipes[id]
+	recipeSummary := &RecipeSummary{
+		ID: id,
+		PriceInSantim: recipe.priceInSantim,
+		TotalMinutes: recipe.totalMinutes,
+		Title: recipe.title,
+		Category: recipe.category,
+	}
+
+	return recipeSummary
+}
 func (r *RecipeStore) CountByCategory() map[string]int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -258,21 +284,22 @@ func (r *RecipeStore) CountByCategory() map[string]int {
 	return count
 }
 
-func (r *RecipeStore) filter(match func(*Recipe) bool) []int {
+func (r *RecipeStore) filter(match func(*Recipe) bool) []*RecipeSummary {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	recipeIds := r.buildList()
-	matchedRecipes := []int{}
+	matchedRecipes := []*RecipeSummary{}
 	for _, id := range recipeIds {
 		recipe := r.recipes[id]
 		if match(recipe) {
-			matchedRecipes = append(matchedRecipes, id)
+			recipeSummary := r.buildRecipeSummary(id)
+			matchedRecipes = append(matchedRecipes, recipeSummary)
 		}
 	}
 	return matchedRecipes
 }
 
-func (r *RecipeStore) FindByIngredient(name string) ([]int, error) {
+func (r *RecipeStore) FindByIngredient(name string) ([]*RecipeSummary, error) {
 	name = strings.ToLower(name)
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -287,9 +314,10 @@ func (r *RecipeStore) FindByIngredient(name string) ([]int, error) {
 		}
 		return false
 	}), nil
+
 }
 
-func (r *RecipeStore) FindByMaxMinutes(maxMinutes int) ([]int, error) {
+func (r *RecipeStore) FindByMaxMinutes(maxMinutes int) ([]*RecipeSummary, error) {
 	if maxMinutes <= 0 {
 		return nil, fmt.Errorf("max minutes must be positive, got: %d", maxMinutes)
 	}
@@ -299,7 +327,7 @@ func (r *RecipeStore) FindByMaxMinutes(maxMinutes int) ([]int, error) {
 
 }
 
-func (r *RecipeStore) FindByTitle(title string) ([]int, error) {
+func (r *RecipeStore) FindByTitle(title string) ([]*RecipeSummary, error) {
 	title = strings.ToLower(title)
 	title = strings.TrimSpace(title)
 	if title == "" {
